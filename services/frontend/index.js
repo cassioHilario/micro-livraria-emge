@@ -16,7 +16,7 @@ function newBook(book) {
                 <div class="content book" data-id="${book.id}">
                     <div class="book-meta">
                         <p class="is-size-4">R$${book.price.toFixed(2)}</p>
-                        <p class="is-size-6">Disponível em estoque: 5</p>
+                        <p class="is-size-6">Disponível em estoque: ${book.quantity}</p>
                         <h4 class="is-size-3 title">${book.name}</h4>
                         <p class="subtitle">${book.author}</p>
                     </div>
@@ -28,7 +28,7 @@ function newBook(book) {
                             <a class="button button-shipping is-info" data-id="${book.id}"> Calcular Frete </a>
                         </div>
                     </div>
-                    <button class="button button-buy is-success is-fullwidth">Comprar</button>
+                    <button class="button button-buy is-success is-fullwidth" data-id="${book.id}">Comprar</button>
                 </div>
             </div>
         </div>`;
@@ -52,6 +52,49 @@ function calculateShipping(id, cep) {
         });
 }
 
+function verifyQuantity(id, i) {
+
+    fetch('http://localhost:3000/product/'+id)
+        .then((data) => {
+            if (data.ok) {
+                return data.json();
+            }
+            throw data.statusText;
+        })
+        .then((data) => {
+            if (data.quantity > 0) {
+                $(".button-buy")[i].removeAttribute("disabled", "");
+            }
+            else{
+                $(".button-buy")[i].setAttribute("disabled", "");
+            }
+        })
+        .catch((err) => {
+            swal('Erro', 'Erro ao listar os produtos', 'error');
+            console.error(err);
+        });
+
+}
+
+function updateStock(id){
+    fetch('http://localhost:3000/product/' + id + '/buy')
+        .then((data) => {
+            if(data.ok){
+                return data.json();
+            }
+            throw data.statusText;
+        })
+        .then(() => {
+            swal('Compra de livro', 'Sua compra foi realizada com sucesso', 'success')
+                .then(() => {
+                    location.reload();
+                });
+        })
+        .catch((err) => {
+            swal('Erro', 'Ocorreu um erro ao prosseguir com a compra: ' + err, 'error');
+        })
+}
+
 document.addEventListener('DOMContentLoaded', function () {
     const books = document.querySelector('.books');
 
@@ -68,6 +111,10 @@ document.addEventListener('DOMContentLoaded', function () {
                     books.appendChild(newBook(book));
                 });
 
+                for(i = 0; i < data.length; i++){
+                    verifyQuantity(data[i]["id"], i)
+                }
+                
                 document.querySelectorAll('.button-shipping').forEach((btn) => {
                     btn.addEventListener('click', (e) => {
                         const id = e.target.getAttribute('data-id');
@@ -78,7 +125,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 document.querySelectorAll('.button-buy').forEach((btn) => {
                     btn.addEventListener('click', (e) => {
-                        swal('Compra de livro', 'Sua compra foi realizada com sucesso', 'success');
+                        const idProduct = e.target.getAttribute('data-id');
+                        
+                        console.log(idProduct);
+                        updateStock(idProduct);
                     });
                 });
             }
